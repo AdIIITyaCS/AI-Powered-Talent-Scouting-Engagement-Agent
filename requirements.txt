@@ -1,8 +1,7 @@
-pinecone>=2.0.0
+pinecone>=8.0.0
 requests>=2.30.0
 python-dotenv>=1.0.0
 transformers>=4.40.0
 torch>=2.0.0
-torchvision>=0.16.0
-langgraph>=0.1.0
+sentence-transformers>=2.2.2
 streamlit>=1.30.0

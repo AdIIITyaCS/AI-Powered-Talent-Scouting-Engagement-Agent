@@ -75,7 +75,7 @@ class TalentScoutingOrchestrator:
             candidate_embeddings = self.embeddings.embed_documents(
                 candidate_texts)
         except Exception as exc:
-            raise RuntimeError("Candidate embedding failed") from exc
+            raise RuntimeError(f"Candidate embedding failed: {exc}") from exc
 
         if debug and candidate_embeddings:
             print("\n[Embedding debug] vector length:",
@@ -90,7 +90,8 @@ class TalentScoutingOrchestrator:
                 f"{jd_metadata.title} {' '.join(jd_metadata.skills)} {jd_metadata.description}"
             )
         except Exception as exc:
-            raise RuntimeError("Job description embedding failed") from exc
+            raise RuntimeError(
+                f"Job description embedding failed: {exc}") from exc
         query_filter = {
             "current_state": {
                 "$eq": CandidateState.DISCOVERED.value

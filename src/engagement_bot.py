@@ -1,14 +1,13 @@
-import os
 import re
-import requests
 from typing import Optional
+from transformers import pipeline
 from src.agent_architecture import CandidateRecord, FinalScoreCalculator
 
 
 class EngagementBot:
-    def __init__(self, model_id: str = "distilbert-base-uncased-finetuned-sst-2-english"):
-        self.api_url = f"https://api-inference.huggingface.co/models/{model_id}"
-        self.headers = {"Authorization": f"Bearer {os.getenv('HF_TOKEN')}"}
+    def __init__(self, model_name: str = "distilbert-base-uncased-finetuned-sst-2-english"):
+        # Local pipeline load hogi
+        self.sentiment = pipeline("sentiment-analysis", model=model_name)
         self.score_calculator = FinalScoreCalculator()
 
     def simulate_outreach(self, candidate: CandidateRecord, jd_title: str) -> str:
@@ -24,20 +23,12 @@ class EngagementBot:
         if not response_text:
             return 0.0
 
-        # API call to Hugging Face instead of local pipeline
-        try:
-            response = requests.post(self.api_url, headers=self.headers, json={
-                                     "inputs": response_text[:512]})
-            # Example: {'label': 'POSITIVE', 'score': 0.99}
-            result = response.json()[0]
+        # Local processing
+        sentiment_result = self.sentiment(response_text[:512])[0]
+        base_score = 0.9 if sentiment_result["label"] == "POSITIVE" else 0.1
+        confidence = float(sentiment_result["score"])
+        interest_score = base_score * confidence
 
-            base_score = 0.9 if result["label"] == "POSITIVE" else 0.1
-            confidence = float(result["score"])
-            interest_score = base_score * confidence
-        except Exception:
-            interest_score = 0.5  # Fallback score
-
-        # Keyword boosting logic remains same
         strong_keywords = ["excited", "interested",
                            "keen", "love", "open", "available"]
         if any(re.search(rf"\b{keyword}\b", response_text, re.IGNORECASE) for keyword in strong_keywords):
