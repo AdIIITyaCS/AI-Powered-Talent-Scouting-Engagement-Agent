@@ -1,41 +1,44 @@
-from __future__ import annotations
-
-from typing import Any, List
-
 import os
-import torch
-from transformers import AutoModel, AutoTokenizer
-
-hf_token = os.getenv("HF_TOKEN")
-if hf_token:
-    os.environ["HF_TOKEN"] = hf_token
+import requests
+from typing import List
 
 
 class EmbeddingService:
-    def __init__(self, model_name: str = "sentence-transformers/all-MiniLM-L6-v2"):
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.model = AutoModel.from_pretrained(model_name).to(self.device)
-
-    def _mean_pooling(self, model_output: Any, attention_mask: Any) -> torch.Tensor:
-        token_embeddings = model_output.last_hidden_state
-        input_mask_expanded = attention_mask.unsqueeze(
-            -1).expand(token_embeddings.size()).float()
-        return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
+    def __init__(self, model_id: str = "sentence-transformers/all-MiniLM-L6-v2"):
+        """
+        Inference API version to save RAM on Render (Free Tier).
+        Requires HF_TOKEN in environment variables.
+        """
+        self.api_url = f"https://api-inference.huggingface.co/models/{model_id}"
+        self.headers = {"Authorization": f"Bearer {os.getenv('HF_TOKEN')}"}
 
     def embed_text(self, text: str) -> List[float]:
-        encoded_input = self.tokenizer(
-            text,
-            padding=True,
-            truncation=True,
-            max_length=256,
-            return_tensors="pt",
-        ).to(self.device)
-        model_output = self.model(**encoded_input)
-        embedding = self._mean_pooling(
-            model_output, encoded_input["attention_mask"])
-        normalized = torch.nn.functional.normalize(embedding, p=2, dim=1)
-        return normalized[0].cpu().tolist()
+        """Get embedding for a single string (like JD)."""
+        payload = {"inputs": text, "options": {"wait_for_model": True}}
+        try:
+            response = requests.post(
+                self.api_url, headers=self.headers, json=payload)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            print(f"Embedding Error: {e}")
+            # Returns 384-dim zero vector as fallback
+            return [0.0] * 384
 
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
-        return [self.embed_text(text) for text in texts]
+        """
+        Get embeddings for a list of strings (Candidates).
+        Sends all texts in one batch for better performance.
+        """
+        if not texts:
+            return []
+
+        payload = {"inputs": texts, "options": {"wait_for_model": True}}
+        try:
+            response = requests.post(
+                self.api_url, headers=self.headers, json=payload)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            print(f"Batch Embedding Error: {e}")
+            return [[0.0] * 384 for _ in texts]
