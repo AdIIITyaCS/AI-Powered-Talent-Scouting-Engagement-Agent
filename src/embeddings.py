@@ -12,7 +12,8 @@ class EmbeddingService:
         self.api_url = f"https://api-inference.huggingface.co/models/{model_id}"
         token = os.getenv("HF_TOKEN")
         if not token:
-            raise ValueError("HF_TOKEN is required for Hugging Face embeddings")
+            raise ValueError(
+                "HF_TOKEN is required for Hugging Face embeddings")
         self.headers = {"Authorization": f"Bearer {token}"}
 
     def _parse_embedding_response(self, response: Any) -> List[float]:
@@ -25,7 +26,8 @@ class EmbeddingService:
             if all(isinstance(item, float) or isinstance(item, int) for item in response):
                 return [float(value) for value in response]
             if all(isinstance(item, list) for item in response):
-                raise ValueError("Batch response received for single text input")
+                raise ValueError(
+                    "Batch response received for single text input")
             if all(isinstance(item, dict) for item in response) and "embedding" in response[0]:
                 return [float(value) for value in response[0]["embedding"]]
 

@@ -72,7 +72,8 @@ class TalentScoutingOrchestrator:
             for index, text in enumerate(candidate_texts[:5], start=1):
                 print(f" {index}. {text}")
         try:
-            candidate_embeddings = self.embeddings.embed_documents(candidate_texts)
+            candidate_embeddings = self.embeddings.embed_documents(
+                candidate_texts)
         except Exception as exc:
             raise RuntimeError("Candidate embedding failed") from exc
 
