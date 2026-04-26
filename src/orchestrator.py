@@ -71,7 +71,11 @@ class TalentScoutingOrchestrator:
             print("\n[Candidate texts to embed]:")
             for index, text in enumerate(candidate_texts[:5], start=1):
                 print(f" {index}. {text}")
-        candidate_embeddings = self.embeddings.embed_documents(candidate_texts)
+        try:
+            candidate_embeddings = self.embeddings.embed_documents(candidate_texts)
+        except Exception as exc:
+            raise RuntimeError("Candidate embedding failed") from exc
+
         if debug and candidate_embeddings:
             print("\n[Embedding debug] vector length:",
                   len(candidate_embeddings[0]))
@@ -80,9 +84,12 @@ class TalentScoutingOrchestrator:
         self.matching_engine.upsert_candidates(
             candidates, candidate_embeddings)
 
-        job_vector = self.embeddings.embed_text(
-            f"{jd_metadata.title} {' '.join(jd_metadata.skills)} {jd_metadata.description}"
-        )
+        try:
+            job_vector = self.embeddings.embed_text(
+                f"{jd_metadata.title} {' '.join(jd_metadata.skills)} {jd_metadata.description}"
+            )
+        except Exception as exc:
+            raise RuntimeError("Job description embedding failed") from exc
         query_filter = {
             "current_state": {
                 "$eq": CandidateState.DISCOVERED.value
